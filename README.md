@@ -1,29 +1,27 @@
 # gosml
 
-[![Build Status](https://travis-ci.org/andig/gosml.svg?branch=master)](https://travis-ci.org/andig/gosml)
+[github.com/DjSni/go-sml](https://github.com/DjSni/go-sml)
 
 Go port of [volkszaehler/libsml](https://github.com/volkszaehler/libsml)
 
 ## Usage
 
-To install run
+To use this package in a module-based project, import it and run:
 
-    go get github.com/andig/gosml
-
-`gosml` uses `dep` for vendor management. Make sure you have `dep` installed and and run `dep ensure` to fetch vendor dependencies.
+    go get github.com/DjSni/go-sml@latest
 
 To include in your code use
 
 ````
 import (
-	"github.com/andig/gosml"
+	sml "github.com/DjSni/go-sml"
 )
 ````
 to import the `sml` package.
 
 ## Example
 
-For an example see [cmd/server](https://github.com/andig/gosml/blob/master/cmd/server/main.go) and the [libsml](https://github.com/volkszaehler/libsml) documentation.
+For an example see [cmd/server](cmd/server/main.go) and the [libsml](https://github.com/volkszaehler/libsml) documentation.
 
 ## Status
 
