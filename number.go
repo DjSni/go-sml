@@ -69,6 +69,10 @@ func NumberParse(buf *Buffer, numtype uint8, maxSize int) (int64, error) {
 		return 0, fmt.Errorf("Invalid length: %d", length)
 	}
 
+	if buf.Cursor+length > len(buf.Bytes) {
+		return 0, fmt.Errorf("Unexpected end of buffer while parsing number")
+	}
+
 	np := make([]byte, maxSize)
 	missingBytes := maxSize - length
 

@@ -2,8 +2,7 @@ package sml
 
 func FileParse(bytes []byte) ([]Message, error) {
 	buf := &Buffer{}
-	buf.Bytes = make([]byte, MAXFILESIZE)
-	copy(buf.Bytes, bytes)
+	buf.Bytes = append([]byte(nil), bytes...)
 
 	messages := make([]Message, 0)
 
@@ -12,6 +11,10 @@ func FileParse(bytes []byte) ([]Message, error) {
 			// reading trailing zeroed bytes
 			BufUpdateBytesRead(buf, 1)
 			continue
+		}
+
+		if BufGetCurrentByte(buf)&TYPEFIELD != TYPELIST {
+			break
 		}
 
 		msg, err := MessageParse(buf, true)

@@ -7,7 +7,7 @@ import (
 	"math"
 	"os"
 
-	sml "github.com/andig/gosml"
+	sml "gosml"
 )
 
 const (
@@ -81,10 +81,13 @@ func main() {
 			if err == io.EOF {
 				break
 			}
-			check(err)
+			if err != nil {
+				fmt.Printf("transport error: %v\n", err)
+				break
+			}
 
 			// parse without escape sequence/ begin/end marker
-			messages, err := sml.FileParse(buf[8 : len(buf)-16])
+			messages, err := sml.FileParse(buf[8 : len(buf)-8])
 
 			for _, msg := range messages {
 				if msg.MessageBody.Tag == sml.MESSAGEGETLISTRESPONSE {

@@ -24,6 +24,9 @@ type Buffer struct {
 }
 
 func BufGetCurrentByte(buf *Buffer) byte {
+	if buf.Cursor >= len(buf.Bytes) {
+		return 0
+	}
 	return buf.Bytes[buf.Cursor]
 }
 
