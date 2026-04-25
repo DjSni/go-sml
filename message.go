@@ -66,26 +66,26 @@ func MessageBodyParse(buf *Buffer) (MessageBody, error) {
 		body.Data, err = CloseResponseParse(buf)
 		return body, err
 	case MESSAGEGETPROFILEPACKREQUEST:
-		return body, fmt.Errorf("Unimplemented message type MESSAGEGETPROFILEPACKREQUEST")
-		// msgBody->data = GetProfilePackRequestParse(buf);
+		body.Data, err = GetProfilePackRequestParse(buf)
+		return body, err
 	case MESSAGEGETPROFILEPACKRESPONSE:
-		return body, fmt.Errorf("Unimplemented message type MESSAGEGETPROFILEPACKRESPONSE")
-		// msgBody->data = GetProfilePackResponseParse(buf);
+		body.Data, err = GetProfilePackResponseParse(buf)
+		return body, err
 	case MESSAGEGETPROFILELISTREQUEST:
-		return body, fmt.Errorf("Unimplemented message type MESSAGEGETPROFILELISTREQUEST")
-		// msgBody->data = GetProfileListRequestParse(buf);
+		body.Data, err = GetProfileListRequestParse(buf)
+		return body, err
 	case MESSAGEGETPROFILELISTRESPONSE:
-		return body, fmt.Errorf("Unimplemented message type MESSAGEGETPROFILELISTRESPONSE")
-		// msgBody->data = GetProfileListResponseParse(buf);
+		body.Data, err = GetProfileListResponseParse(buf)
+		return body, err
 	case MESSAGEGETPROCPARAMETERREQUEST:
-		return body, fmt.Errorf("Unimplemented message type MESSAGEGETPROCPARAMETERREQUEST")
-		// msgBody->data = GetProcParameterRequestParse(buf);
+		body.Data, err = GetProcParameterRequestParse(buf)
+		return body, err
 	case MESSAGEGETPROCPARAMETERRESPONSE:
-		return body, fmt.Errorf("Unimplemented message type MESSAGEGETPROCPARAMETERRESPONSE")
-		// msgBody->data = GetProcParameterResponseParse(buf);
+		body.Data, err = GetProcParameterResponseParse(buf)
+		return body, err
 	case MESSAGESETPROCPARAMETERREQUEST:
-		return body, fmt.Errorf("Unimplemented message type MESSAGESETPROCPARAMETERREQUEST")
-		// msgBody->data = SetProcParameterRequestParse(buf);
+		body.Data, err = SetProcParameterRequestParse(buf)
+		return body, err
 	case MESSAGEGETLISTREQUEST:
 		body.Data, err = GetListRequestParse(buf)
 		return body, err
@@ -93,8 +93,8 @@ func MessageBodyParse(buf *Buffer) (MessageBody, error) {
 		body.Data, err = GetListResponseParse(buf)
 		return body, err
 	case MESSAGEATTENTIONRESPONSE:
-		return body, fmt.Errorf("Unimplemented message type MESSAGEATTENTIONRESPONSE")
-		// msgBody->data = AttentionResponseParse(buf);
+		body.Data, err = AttentionResponseParse(buf)
+		return body, err
 	}
 
 	return body, fmt.Errorf("Invalid message type: % x", body.Tag)
