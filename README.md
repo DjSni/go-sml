@@ -1,4 +1,4 @@
-# gosml
+# go-sml
 
 [github.com/DjSni/go-sml](https://github.com/DjSni/go-sml)
 

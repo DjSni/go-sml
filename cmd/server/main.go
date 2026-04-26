@@ -7,7 +7,7 @@ import (
 	"math"
 	"os"
 
-	sml "gosml"
+	sml "go-sml"
 )
 
 const (
