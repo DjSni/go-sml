@@ -7,7 +7,7 @@ import (
 	"math"
 	"os"
 
-	sml "go-sml"
+	sml "github.com/DjSni/go-sml"
 )
 
 const (
