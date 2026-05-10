@@ -1,3 +1,3 @@
 module github.com/DjSni/go-sml
 
-go 1.26
+go 1.25
