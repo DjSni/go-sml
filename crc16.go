@@ -42,3 +42,27 @@ func Crc16Calculate(buf []byte, len int) uint16 {
 
 	return fcs
 }
+
+// pulseCRCMatches handles a reproducible Tibber Pulse firmware defect. In
+// one list-entry value the firmware emits 0x40 instead of 0x60, but computes
+// the message CRC as if the unsigned type (0x60) had been emitted. The
+// sequence is deliberately matched in context; arbitrary bytes are never
+// normalized.
+func pulseCRCMatches(message []byte, expected uint16) bool {
+	const (
+		prefixLen   = 4
+		wrongType   = 0x40
+		correctType = 0x60
+	)
+
+	for i := 0; i+6 <= len(message); i++ {
+		if message[i] != 0x77 || message[i+1] != 0x07 || message[i+2] != 0x01 || message[i+3] != 0x00 || message[i+4] != wrongType || message[i+5] != 0x32 {
+			continue
+		}
+		normalized := append([]byte(nil), message...)
+		normalized[i+prefixLen] = correctType
+		return Crc16Calculate(normalized, len(normalized)) == expected
+	}
+
+	return false
+}

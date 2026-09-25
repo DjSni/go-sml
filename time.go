@@ -1,6 +1,9 @@
 package sml
 
-import "fmt"
+import (
+	"encoding/binary"
+	"fmt"
+)
 
 type Time uint32
 
@@ -76,6 +79,21 @@ func TimeParse(buf *Buffer) (Time, error) {
 		if timestamp, err = U32Parse(buf); err != nil {
 			return 0, err
 		}
+	case 0x40:
+		// Some Tibber Pulse firmware encodes this timestamp as the
+		// four-byte 0x45 variant. It is only valid here, at the SML time
+		// value position; do not normalize arbitrary input bytes.
+		if BufGetCurrentByte(buf) != 0x45 {
+			return 0, fmt.Errorf("Invalid time format %02x", BufGetCurrentByte(buf))
+		}
+		if length := BufGetNextLength(buf); length != 4 {
+			return 0, fmt.Errorf("Invalid time length: %d (expected 4)", length)
+		}
+		if buf.Cursor+4 > len(buf.Bytes) {
+			return 0, fmt.Errorf("Unexpected end of buffer while parsing time")
+		}
+		timestamp = binary.BigEndian.Uint32(buf.Bytes[buf.Cursor : buf.Cursor+4])
+		BufUpdateBytesRead(buf, 4)
 	case TYPELIST:
 		// Some meters (e.g. FROETEC Multiflex ZG22) giving not one uint32
 		// as timestamp, but a list of 3 values.
