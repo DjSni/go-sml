@@ -54,6 +54,14 @@ func ValueParse(buf *Buffer) (Value, error) {
 
 	typefield := BufGetNextType(buf)
 	b := BufGetCurrentByte(buf)
+	if buf.pulseValue && b == 0x40 {
+		// Tibber Pulse emits the zero-length unsigned value type as 0x40
+		// in this specific list entry. A valid Boolean is encoded with a
+		// length, e.g. 0x41 0x00, and is not affected.
+		BufUpdateBytesRead(buf, 1)
+		value.Typ = TYPEUNSIGNED | 1
+		return value, nil
+	}
 
 	max := 1
 	value.Typ = typefield

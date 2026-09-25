@@ -67,6 +67,26 @@ func TestTimeParseUnsigned65Variant(t *testing.T) {
 	}
 }
 
+func TestPulseListEntryTreatsMalformedValueTypeAsUnsigned(t *testing.T) {
+	value, err := ValueParse(&Buffer{Bytes: []byte{0x40}, pulseValue: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if value.Typ&TYPEFIELD != TYPEUNSIGNED || value.DataInt != 0 {
+		t.Fatalf("Pulse value = type %#x value %d, want unsigned zero", value.Typ, value.DataInt)
+	}
+}
+
+func TestBooleanValueRemainsBoolean(t *testing.T) {
+	value, err := ValueParse(&Buffer{Bytes: []byte{0x42, 0x01}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if value.Typ != TYPEBOOLEAN || !value.DataBoolean {
+		t.Fatalf("Boolean value = type %#x value %t", value.Typ, value.DataBoolean)
+	}
+}
+
 func TestPulseFrameCRCErrorIsRejected(t *testing.T) {
 	frame := pulseFrame(t)
 	frame[20] ^= 0x01

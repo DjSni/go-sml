@@ -21,6 +21,8 @@ const (
 type Buffer struct {
 	Bytes  []byte
 	Cursor int
+
+	pulseValue bool
 }
 
 func BufGetCurrentByte(buf *Buffer) byte {
