@@ -59,6 +59,7 @@ func ValueParse(buf *Buffer) (Value, error) {
 		// in this specific list entry. A valid Boolean is encoded with a
 		// length, e.g. 0x41 0x00, and is not affected.
 		BufUpdateBytesRead(buf, 1)
+		buf.pulseCorrections = append(buf.pulseCorrections, buf.Cursor-1)
 		value.Typ = TYPEUNSIGNED | 1
 		return value, nil
 	}

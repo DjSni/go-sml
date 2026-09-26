@@ -48,13 +48,26 @@ func Crc16Calculate(buf []byte, len int) uint16 {
 // the message CRC as if the unsigned type (0x60) had been emitted. The
 // sequence is deliberately matched in context; arbitrary bytes are never
 // normalized.
-func pulseCRCMatches(message []byte, expected uint16) bool {
+func pulseCRCMatches(message []byte, expected uint16, messageStart int, corrections []int) bool {
 	const (
 		prefixLen   = 4
 		wrongType   = 0x40
 		correctType = 0x60
 	)
 
+	for _, correction := range corrections {
+		i := correction - messageStart
+		if i < 0 || i >= len(message) || message[i] != wrongType {
+			continue
+		}
+		normalized := append([]byte(nil), message...)
+		normalized[i] = correctType
+		return Crc16Calculate(normalized, len(normalized)) == expected
+	}
+
+	// Older Pulse captures put the same malformed byte in the encoded
+	// list-entry prefix. Keep accepting that known framing variant without
+	// tying detection to one OBIS name.
 	for i := 0; i+6 <= len(message); i++ {
 		if message[i] != 0x77 || message[i+1] != 0x07 || message[i+2] != 0x01 || message[i+3] != 0x00 || message[i+4] != wrongType || message[i+5] != 0x32 {
 			continue

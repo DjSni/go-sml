@@ -23,7 +23,6 @@ func ListEntryParse(buf *Buffer) (ListEntry, error) {
 	if elem.ObjName, err = OctetStringParse(buf); err != nil {
 		return elem, err
 	}
-	pulseValue := isPulseListEntry(elem.ObjName)
 
 	if elem.Status, err = StatusParse(buf); err != nil {
 		return elem, err
@@ -42,7 +41,7 @@ func ListEntryParse(buf *Buffer) (ListEntry, error) {
 	}
 
 	previousPulseValue := buf.pulseValue
-	buf.pulseValue = pulseValue
+	buf.pulseValue = true
 	elem.Value, err = ValueParse(buf)
 	buf.pulseValue = previousPulseValue
 	if err != nil {
@@ -54,10 +53,6 @@ func ListEntryParse(buf *Buffer) (ListEntry, error) {
 	}
 
 	return elem, nil
-}
-
-func isPulseListEntry(objName OctetString) bool {
-	return len(objName) == 6 && objName[0] == 1 && objName[1] == 0 && objName[2] == 0x40 && objName[3] == 0x32 && objName[4] == 1 && objName[5] == 1
 }
 
 func ListParse(buf *Buffer) ([]ListEntry, error) {
