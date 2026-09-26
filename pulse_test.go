@@ -51,6 +51,37 @@ func TestPulseFrameParsesThreeMessagesWithCRC(t *testing.T) {
 	}
 }
 
+func TestLivePulseFrameParsesThreeMessagesWithCRC(t *testing.T) {
+	frame := pulseFixture(t, "testdata/node_data_live_20260927.hex")
+	transport, err := TransportRead(bufio.NewReader(bytes.NewReader(frame)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	messages, err := FileParse(transport[8 : len(transport)-8])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(messages) != 3 {
+		t.Fatalf("parsed %d messages, want 3", len(messages))
+	}
+}
+
+func pulseFixture(t *testing.T, path string) []byte {
+	t.Helper()
+	hexData, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := hex.DecodeString(strings.TrimSpace(string(hexData)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(data) != 232 {
+		t.Fatalf("fixture %s length = %d, want 232", path, len(data))
+	}
+	return data
+}
+
 func TestTimeParsePulse45Variant(t *testing.T) {
 	buf := &Buffer{Bytes: []byte{0x72, 0x62, 0x01, 0x45, 0x04, 0xA2, 0x9B, 0x2A}}
 	got, err := TimeParse(buf)
