@@ -17,6 +17,24 @@ func U8Parse(buf *Buffer) (uint8, error) {
 	return uint8(num), err
 }
 
+func PulseU8Parse(buf *Buffer) (uint8, error) {
+	if BufGetCurrentByte(buf)&TYPEFIELD != TYPEBOOLEAN || BufGetCurrentByte(buf)&LENGTHFIELD != 2 {
+		return U8Parse(buf)
+	}
+
+	correction := buf.Cursor
+	if length := BufGetNextLength(buf); length != 1 {
+		return 0, fmt.Errorf("Invalid Pulse unsigned byte length: %d (expected 1)", length)
+	}
+	if buf.Cursor >= len(buf.Bytes) {
+		return 0, fmt.Errorf("Unexpected end of buffer while parsing Pulse unsigned byte")
+	}
+	num := buf.Bytes[buf.Cursor]
+	BufUpdateBytesRead(buf, 1)
+	buf.pulseCorrections = append(buf.pulseCorrections, pulseCorrection{offset: correction, original: 0x42, replacement: TYPEUNSIGNED | 2})
+	return num, nil
+}
+
 func U16Parse(buf *Buffer) (uint16, error) {
 	num, err := NumberParse(buf, TYPEUNSIGNED, TYPENUMBER_16)
 	return uint16(num), err

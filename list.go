@@ -32,7 +32,7 @@ func ListEntryParse(buf *Buffer) (ListEntry, error) {
 		return elem, err
 	}
 
-	if elem.Unit, err = U8Parse(buf); err != nil {
+	if elem.Unit, err = PulseU8Parse(buf); err != nil {
 		return elem, err
 	}
 

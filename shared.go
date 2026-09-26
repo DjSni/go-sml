@@ -23,7 +23,13 @@ type Buffer struct {
 	Cursor int
 
 	pulseValue       bool
-	pulseCorrections []int
+	pulseCorrections []pulseCorrection
+}
+
+type pulseCorrection struct {
+	offset      int
+	original    byte
+	replacement byte
 }
 
 func BufGetCurrentByte(buf *Buffer) byte {

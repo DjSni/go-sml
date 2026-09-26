@@ -3,6 +3,7 @@ package sml
 import (
 	//	"fmt"
 
+	"encoding/binary"
 	"errors"
 	"fmt"
 )
@@ -48,7 +49,7 @@ func MessageBodyParse(buf *Buffer) (MessageBody, error) {
 		return body, err
 	}
 
-	if body.Tag, err = U32Parse(buf); err != nil {
+	if body.Tag, err = pulseMessageTagParse(buf); err != nil {
 		return body, err
 	}
 
@@ -100,6 +101,23 @@ func MessageBodyParse(buf *Buffer) (MessageBody, error) {
 	return body, fmt.Errorf("Invalid message type: % x", body.Tag)
 }
 
+func pulseMessageTagParse(buf *Buffer) (uint32, error) {
+	if BufGetCurrentByte(buf) != 0x43 {
+		return U32Parse(buf)
+	}
+	correction := buf.Cursor
+	if length := BufGetNextLength(buf); length != 2 {
+		return 0, fmt.Errorf("Invalid Pulse message tag length: %d (expected 2)", length)
+	}
+	if buf.Cursor+2 > len(buf.Bytes) {
+		return 0, errors.New("Unexpected end of buffer while parsing Pulse message tag")
+	}
+	tag := binary.BigEndian.Uint16(buf.Bytes[buf.Cursor : buf.Cursor+2])
+	BufUpdateBytesRead(buf, 2)
+	buf.pulseCorrections = append(buf.pulseCorrections, pulseCorrection{offset: correction, original: 0x43, replacement: TYPEUNSIGNED | 3})
+	return uint32(tag), nil
+}
+
 func MessageParse(buf *Buffer, validate ...bool) (Message, error) {
 	Debug(buf, "MessageParse")
 
@@ -117,11 +135,11 @@ func MessageParse(buf *Buffer, validate ...bool) (Message, error) {
 		return msg, err
 	}
 
-	if msg.GroupID, err = U8Parse(buf); err != nil {
+	if msg.GroupID, err = PulseU8Parse(buf); err != nil {
 		return msg, err
 	}
 
-	if msg.AbortOnError, err = U8Parse(buf); err != nil {
+	if msg.AbortOnError, err = PulseU8Parse(buf); err != nil {
 		return msg, err
 	}
 
