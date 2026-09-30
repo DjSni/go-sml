@@ -10,6 +10,9 @@ type SetProcParameterRequest struct {
 
 func SetProcParameterRequestParse(buf *Buffer) (SetProcParameterRequest, error) {
 	msg := SetProcParameterRequest{}
+	if err := validateBody(buf, MESSAGESETPROCPARAMETERREQUEST); err != nil {
+		return msg, err
+	}
 	var err error
 
 	if err := Expect(buf, TYPELIST, 5); err != nil {

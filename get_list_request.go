@@ -10,6 +10,9 @@ type GetListRequest struct {
 
 func GetListRequestParse(buf *Buffer) (GetListRequest, error) {
 	msg := GetListRequest{}
+	if err := validateBody(buf, MESSAGEGETLISTREQUEST); err != nil {
+		return msg, err
+	}
 	var err error
 
 	if err := Expect(buf, TYPELIST, 5); err != nil {

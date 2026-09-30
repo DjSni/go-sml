@@ -35,6 +35,9 @@ func ListEntry2Float(entry sml.ListEntry) float64 {
 		scaler = int(entry.Scaler)
 	}
 
+	if entry.Value.Typ&sml.TYPEFIELD == sml.TYPEUNSIGNED {
+		return float64(entry.Value.DataUnsigned) * math.Pow10(scaler)
+	}
 	return float64(entry.Value.DataInt) * math.Pow10(scaler)
 }
 
@@ -86,8 +89,7 @@ func main() {
 				break
 			}
 
-			// parse without escape sequence/ begin/end marker
-			messages, err := sml.FileParse(buf[8 : len(buf)-8])
+			messages, err := sml.TransportParse(buf)
 
 			for _, msg := range messages {
 				if msg.MessageBody.Tag == sml.MESSAGEGETLISTRESPONSE {

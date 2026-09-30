@@ -12,6 +12,9 @@ type GetListResponse struct {
 
 func GetListResponseParse(buf *Buffer) (GetListResponse, error) {
 	list := GetListResponse{}
+	if err := validateBody(buf, MESSAGEGETLISTRESPONSE); err != nil {
+		return list, err
+	}
 	var err error
 
 	if err := Expect(buf, TYPELIST, 7); err != nil {

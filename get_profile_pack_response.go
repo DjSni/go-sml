@@ -31,6 +31,9 @@ type ValueEntry struct {
 
 func GetProfilePackResponseParse(buf *Buffer) (GetProfilePackResponse, error) {
 	msg := GetProfilePackResponse{}
+	if err := validateBody(buf, MESSAGEGETPROFILEPACKRESPONSE); err != nil {
+		return msg, err
+	}
 	var err error
 
 	if err := Expect(buf, TYPELIST, 8); err != nil {
@@ -73,6 +76,9 @@ func GetProfilePackResponseParse(buf *Buffer) (GetProfilePackResponse, error) {
 }
 
 func ProfObjHeaderEntryParse(buf *Buffer) (*ProfObjHeaderEntry, error) {
+	if err := validateRule(buf, sequence(octets, u8, i8)); err != nil {
+		return nil, err
+	}
 	entry := &ProfObjHeaderEntry{}
 	var err error
 
@@ -94,6 +100,9 @@ func ProfObjHeaderEntryParse(buf *Buffer) (*ProfObjHeaderEntry, error) {
 }
 
 func ProfObjPeriodEntryParse(buf *Buffer) (*ProfObjPeriodEntry, error) {
+	if err := validateRule(buf, sequence(timeRule, u64, sequenceOf(sequence(valueRule, optional(octets)), 0), optional(octets))); err != nil {
+		return nil, err
+	}
 	entry := &ProfObjPeriodEntry{}
 	var err error
 
@@ -118,6 +127,9 @@ func ProfObjPeriodEntryParse(buf *Buffer) (*ProfObjPeriodEntry, error) {
 }
 
 func ValueEntryParse(buf *Buffer) (*ValueEntry, error) {
+	if err := validateRule(buf, sequence(valueRule, optional(octets))); err != nil {
+		return nil, err
+	}
 	entry := &ValueEntry{}
 	var err error
 

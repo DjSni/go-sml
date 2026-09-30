@@ -10,26 +10,29 @@ import (
 
 func TestTransportReadFindsFrameAfterNoise(t *testing.T) {
 	payload := []byte{0xaa, 0xbb, 0xcc}
-	fcsAndFill := []byte{0x12, 0x34, 0x00}
-
-	input := append([]byte{0x00, 0x11, 0x22}, StartSeq...)
-	input = append(input, payload...)
-	input = append(input, EndSeq...)
-	input = append(input, fcsAndFill...)
+	want := buildTransportFrame(payload)
+	input := append([]byte{0x00, 0x11, 0x22}, want...)
 
 	got, err := TransportRead(bufio.NewReader(bytes.NewReader(input)))
 	if err != nil {
 		t.Fatalf("TransportRead returned error: %v", err)
 	}
 
-	want := append([]byte{}, StartSeq...)
-	want = append(want, payload...)
-	want = append(want, EndSeq...)
-	want = append(want, fcsAndFill...)
-
 	if !bytes.Equal(got, want) {
 		t.Fatalf("unexpected frame bytes: got % x, want % x", got, want)
 	}
+}
+
+func buildTransportFrame(payload []byte) []byte {
+	wire := bytes.ReplaceAll(payload, EscSeq, append(append([]byte{}, EscSeq...), EscSeq...))
+	fill := (4 - len(wire)%4) % 4
+	frame := append([]byte{}, StartSeq...)
+	frame = append(frame, wire...)
+	frame = append(frame, make([]byte, fill)...)
+	frame = append(frame, EndSeq...)
+	frame = append(frame, byte(fill))
+	crc := Crc16Calculate(frame, len(frame))
+	return append(frame, byte(crc>>8), byte(crc))
 }
 
 func TestTransportReadReturnsEOFWithoutStartSequence(t *testing.T) {

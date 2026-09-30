@@ -4,6 +4,19 @@
 
 Go port of [volkszaehler/libsml](https://github.com/volkszaehler/libsml)
 
+**v1.0.0 is a breaking, strict binary-SML release.** Parsing follows the BSI
+SML 1.04 publication; damaged frames are rejected, never repaired. See
+[STANDARD.md](STANDARD.md) for the normative source, supported scope and migration.
+
+```go
+messages, err := sml.TransportParse(frame)
+if err != nil {
+    // Discard this frame; no partial readings are returned.
+    return err
+}
+_ = messages
+```
+
 ## Usage
 
 To use this package in a module-based project, import it and run:
@@ -25,9 +38,11 @@ For an example see [cmd/server](cmd/server/main.go) and the [libsml](https://git
 
 ## Status
 
-The implementation of this port is not complete and has not been extensively tested.
+The implemented scope is binary SML core messages and transport version 1.
+XML, COSEM and transport version 2 are not implemented. The corpus audit
+distinguishes valid frames from corrupt or nonstandard inputs; see STANDARD.md.
 
-It is only intended for parsing OBIS codes. This has been validated against
+Historical examples from
 [libsml-testing](https://github.com/devZer0/libsml-testing):
 
     libsml-testing/DrNeuhaus_SMARTY_ix-130.bin

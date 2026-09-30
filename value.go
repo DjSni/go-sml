@@ -7,105 +7,66 @@ type Value struct {
 	DataBytes   OctetString
 	DataBoolean bool
 	DataInt     int64
+	// DataUnsigned preserves the entire uint64 range. DataInt is signed only.
+	DataUnsigned uint64
+	DataTime     *Time
 }
 
 func ValueParse(buf *Buffer) (Value, error) {
-	/*
-		if (BufOptionalIsSkipped(buf)) {
-			return 0;
-		}
-
-		int max = 1;
-		int type = BufGetNextType(buf);
-		unsigned char byte = BufGetCurrentByte(buf);
-
-		Value *value = ValueInit();
-		value->type = type;
-
-		switch (type) {
-			case TYPEOCTETSTRING:
-				value->data.bytes = OctetStringParse(buf);
-				break;
-			case TYPEBOOLEAN:
-				value->data.boolean = BooleanParse(buf);
-				break;
-			case TYPEUNSIGNED:
-			case TYPEINTEGER:
-				// get maximal size, if not all bytes are used (example: only 6 bytes for a u64)
-				while (max < ((byte & LENGTHFIELD) - 1)) {
-					max <<= 1;
-				}
-
-				value->data.uint8 = NumberParse(buf, type, max);
-				value->type |= max;
-				break;
-			default:
-				buf->error = 1;
-				break;
-		}
-	*/
-	value := Value{}
-
-	if BufOptionalIsSkipped(buf) {
-		return value, nil
+	v := Value{}
+	if err := validateRule(buf, valueRule); err != nil {
+		return v, err
 	}
-
-	Debug(buf, "ValueParse")
-
-	typefield := BufGetNextType(buf)
-	b := BufGetCurrentByte(buf)
-	if buf.pulseValue && b == 0x40 {
-		// Tibber Pulse emits the zero-length unsigned value type as 0x40
-		// in this specific list entry. A valid Boolean is encoded with a
-		// length, e.g. 0x41 0x00, and is not affected.
-		BufUpdateBytesRead(buf, 1)
-		buf.pulseCorrections = append(buf.pulseCorrections, pulseCorrection{offset: buf.Cursor - 1, original: 0x40, replacement: TYPEUNSIGNED})
-		value.Typ = TYPEUNSIGNED | 1
-		return value, nil
+	if buf.Cursor >= len(buf.Bytes) {
+		return v, fmt.Errorf("Unexpected end of buffer while parsing value")
 	}
-
-	max := 1
-	value.Typ = typefield
-
+	typ := BufGetNextType(buf)
+	v.Typ = typ
 	var err error
-	switch typefield {
+	switch typ {
 	case TYPEOCTETSTRING:
-		value.DataBytes, err = OctetStringParse(buf)
-		if err != nil {
-			return value, err
-		}
+		v.DataBytes, err = OctetStringParse(buf)
 	case TYPEBOOLEAN:
-		value.DataBoolean, err = BooleanParse(buf)
-		if err != nil {
-			return value, err
+		v.DataBoolean, err = BooleanParse(buf)
+	case TYPEINTEGER, TYPEUNSIGNED:
+		// Inspect the actual TL length, not just its low nibble.
+		peek := *buf
+		length := BufGetNextLength(&peek)
+		if length < 1 || length > 8 {
+			return v, fmt.Errorf("Invalid value number length: %d", length)
 		}
-	case TYPEUNSIGNED:
-		// get maximal size, if not all bytes are used (example: only 6 bytes for a u64)
-		for max < int((b&LENGTHFIELD)-1) {
-			max = max << 1
+		size := 1
+		for size < length {
+			size *= 2
 		}
-
-		value.DataInt, err = NumberParse(buf, typefield, max)
-		if err != nil {
-			return value, err
+		n, parseErr := NumberParse(buf, typ, size)
+		err = parseErr
+		v.Typ |= uint8(size)
+		if typ == TYPEUNSIGNED {
+			v.DataUnsigned = uint64(n)
+		} else {
+			v.DataInt = n
 		}
-
-		value.Typ = value.Typ | uint8(max)
-	case TYPEINTEGER:
-		// get maximal size, if not all bytes are used (example: only 6 bytes for a u64)
-		for max < int((b&LENGTHFIELD)-1) {
-			max = max << 1
+	case TYPELIST:
+		// SML_ListType is a CHOICE whose sole defined alternative is SML_Time.
+		if err = Expect(buf, TYPELIST, 2); err != nil {
+			return v, err
 		}
-
-		value.DataInt, err = NumberParse(buf, typefield, max)
-		if err != nil {
-			return value, err
+		var tag uint8
+		if tag, err = U8Parse(buf); err != nil {
+			return v, err
 		}
-
-		value.Typ = value.Typ | uint8(max)
+		if tag != 1 {
+			return v, fmt.Errorf("Invalid SML_ListType choice: %02x", tag)
+		}
+		var t Time
+		t, err = TimeParse(buf)
+		if !t.Present && err == nil {
+			return v, fmt.Errorf("Missing required SML_Time value")
+		}
+		v.DataTime = &t
 	default:
-		return value, fmt.Errorf("Unexpected type %02x", typefield)
+		err = fmt.Errorf("Unexpected value type %02x", typ)
 	}
-
-	return value, nil
+	return v, err
 }

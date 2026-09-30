@@ -27,3 +27,18 @@ jobs:
 
       - name: Verify
         run: go test ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Checkout external SML corpus
+        uses: actions/checkout@v7
+        with:
+          repository: devZer0/libsml-testing
+          ref: a3c7869fca8ad73c34248f6b4eda115acf7c79dc
+          path: external/libsml-testing
+
+      - name: Verify complete external corpus
+        env:
+          LIBSML_TESTING_DIR: external/libsml-testing
+        run: go test -run TestExternalLibSMLFixtures -v -count=1

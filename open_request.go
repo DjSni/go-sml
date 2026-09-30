@@ -12,6 +12,9 @@ type OpenRequest struct {
 
 func OpenRequestParse(buf *Buffer) (OpenRequest, error) {
 	msg := OpenRequest{}
+	if err := validateBody(buf, MESSAGEOPENREQUEST); err != nil {
+		return msg, err
+	}
 	var err error
 
 	if err := Expect(buf, TYPELIST, 7); err != nil {

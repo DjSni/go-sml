@@ -1,117 +1,55 @@
 package sml
 
-import (
-	"encoding/binary"
-	"fmt"
-)
+import "fmt"
 
-type Time uint32
+// Time preserves all three SML_Time choices (BSI IVb, definitions F-H).
+// Present distinguishes an absent optional time from timestamp zero.
+type Time struct {
+	Present          bool
+	Tag              uint8
+	Timestamp        uint32
+	LocalOffset      int16
+	SeasonTimeOffset int16
+}
 
 func TimeParse(buf *Buffer) (Time, error) {
-	/*
-		if (BufOptionalIsSkipped(buf)) {
-			return 0;
-		}
-
-		Time *tme = TimeInit();
-
-		if (BufGetNextType(buf) != TYPELIST) {
-			buf->error = 1;
-			goto error;
-		}
-
-		if (BufGetNextLength(buf) != 2) {
-			buf->error = 1;
-			goto error;
-		}
-
-		tme->tag = U8Parse(buf);
-		if (BufHasErrors(buf)) goto error;
-
-		int type = BufGetNextType(buf);
-		switch (type) {
-		case TYPEUNSIGNED:
-			tme->data.timestamp = U32Parse(buf);
-			if (BufHasErrors(buf)) goto error;
-			break;
-		case TYPELIST:
-			// Some meters (e.g. FROETEC Multiflex ZG22) giving not one uint32
-			// as timestamp, but a list of 3 values.
-			// Ignoring these values, so that parsing does not fail.
-			BufGetNextLength(buf); // should we check the length here?
-			u32 *t1 = U32Parse(buf);
-			if (BufHasErrors(buf)) goto error;
-			i16 *t2 = I16Parse(buf);
-			if (BufHasErrors(buf)) goto error;
-			i16 *t3 = I16Parse(buf);
-			if (BufHasErrors(buf)) goto error;
-			fprintf(stderr,
-				"libsml: error: Time as list[3]: ignoring value[0]=%u value[1]=%d value[2]=%d\n",
-				*t1, *t2, *t3);
-			break;
-		default:
-			goto error;
-		}
-	*/
-	// TODO return proper timestamps
-
-	if skip := BufOptionalIsSkipped(buf); skip {
-		return 0, nil
+	t := Time{}
+	if BufOptionalIsSkipped(buf) {
+		return t, nil
 	}
-
-	Debug(buf, "TimeParse")
-
+	if err := validateRule(buf, timeRule); err != nil {
+		return t, err
+	}
 	if err := Expect(buf, TYPELIST, 2); err != nil {
-		return 0, err
+		return t, err
 	}
-
-	// time.tag
-	if _, err := U8Parse(buf); err != nil {
-		return 0, err
-	}
-
-	var timestamp uint32
 	var err error
-
-	typefield := BufGetNextType(buf)
-	switch typefield {
-	case TYPEUNSIGNED:
-		if timestamp, err = U32Parse(buf); err != nil {
-			return 0, err
-		}
-	case 0x40:
-		// Some Tibber Pulse firmware encodes this timestamp as the
-		// four-byte 0x45 variant. It is only valid here, at the SML time
-		// value position; do not normalize arbitrary input bytes.
-		if BufGetCurrentByte(buf) != 0x45 {
-			return 0, fmt.Errorf("Invalid time format %02x", BufGetCurrentByte(buf))
-		}
-		if length := BufGetNextLength(buf); length != 4 {
-			return 0, fmt.Errorf("Invalid time length: %d (expected 4)", length)
-		}
-		if buf.Cursor+4 > len(buf.Bytes) {
-			return 0, fmt.Errorf("Unexpected end of buffer while parsing time")
-		}
-		timestamp = binary.BigEndian.Uint32(buf.Bytes[buf.Cursor : buf.Cursor+4])
-		BufUpdateBytesRead(buf, 4)
-	case TYPELIST:
-		// Some meters (e.g. FROETEC Multiflex ZG22) giving not one uint32
-		// as timestamp, but a list of 3 values.
-		// Ignoring these values, so that parsing does not fail.
-		BufGetNextLength(buf) // should we check the length here?
-
-		if _, err := U32Parse(buf); err != nil {
-			return 0, err
-		}
-		if _, err := I16Parse(buf); err != nil {
-			return 0, err
-		}
-		if _, err := I16Parse(buf); err != nil {
-			return 0, err
-		}
-	default:
-		return 0, fmt.Errorf("Invalid time format %02x", typefield)
+	if t.Tag, err = U8Parse(buf); err != nil {
+		return t, err
 	}
-
-	return Time(timestamp), nil
+	switch t.Tag {
+	case 1, 2:
+		if BufGetNextType(buf) != TYPEUNSIGNED {
+			return t, fmt.Errorf("Invalid time value type %02x", BufGetNextType(buf))
+		}
+		t.Timestamp, err = U32Parse(buf)
+	case 3:
+		if err = Expect(buf, TYPELIST, 3); err != nil {
+			return t, err
+		}
+		if t.Timestamp, err = U32Parse(buf); err != nil {
+			return t, err
+		}
+		if t.LocalOffset, err = I16Parse(buf); err != nil {
+			return t, err
+		}
+		t.SeasonTimeOffset, err = I16Parse(buf)
+	default:
+		return t, fmt.Errorf("Invalid time choice %02x", t.Tag)
+	}
+	if err != nil {
+		return t, err
+	}
+	t.Present = true
+	return t, nil
 }

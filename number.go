@@ -1,9 +1,6 @@
 package sml
 
-import (
-	"encoding/binary"
-	"fmt"
-)
+import "fmt"
 
 const (
 	TYPENUMBER_8  = 1
@@ -15,24 +12,6 @@ const (
 func U8Parse(buf *Buffer) (uint8, error) {
 	num, err := NumberParse(buf, TYPEUNSIGNED, TYPENUMBER_8)
 	return uint8(num), err
-}
-
-func PulseU8Parse(buf *Buffer) (uint8, error) {
-	if BufGetCurrentByte(buf)&TYPEFIELD != TYPEBOOLEAN || BufGetCurrentByte(buf)&LENGTHFIELD != 2 {
-		return U8Parse(buf)
-	}
-
-	correction := buf.Cursor
-	if length := BufGetNextLength(buf); length != 1 {
-		return 0, fmt.Errorf("Invalid Pulse unsigned byte length: %d (expected 1)", length)
-	}
-	if buf.Cursor >= len(buf.Bytes) {
-		return 0, fmt.Errorf("Unexpected end of buffer while parsing Pulse unsigned byte")
-	}
-	num := buf.Bytes[buf.Cursor]
-	BufUpdateBytesRead(buf, 1)
-	buf.pulseCorrections = append(buf.pulseCorrections, pulseCorrection{offset: correction, original: 0x42, replacement: TYPEUNSIGNED | 2})
-	return num, nil
 }
 
 func U16Parse(buf *Buffer) (uint16, error) {
@@ -83,41 +62,25 @@ func NumberParse(buf *Buffer, numtype uint8, maxSize int) (int64, error) {
 	}
 
 	length := BufGetNextLength(buf)
-	if length < 0 || length > maxSize {
+	if length < 1 || length > maxSize {
 		return 0, fmt.Errorf("Invalid length: %d", length)
 	}
 
-	if buf.Cursor+length > len(buf.Bytes) {
+	if length > len(buf.Bytes)-buf.Cursor {
 		return 0, fmt.Errorf("Unexpected end of buffer while parsing number")
 	}
 
-	np := make([]byte, maxSize)
-	missingBytes := maxSize - length
-
-	for i := 0; i < length; i++ {
-		np[missingBytes+i] = buf.Bytes[buf.Cursor+i]
+	if maxSize != 1 && maxSize != 2 && maxSize != 4 && maxSize != 8 {
+		return 0, fmt.Errorf("Invalid number type size %02x", maxSize)
 	}
-
-	negativeInt := typefield == TYPEINTEGER && (typefield&128 > 0)
-	if negativeInt {
-		for i := 0; i < missingBytes; i++ {
-			np[i] = 0xFF
-		}
+	var bits uint64
+	if typefield == TYPEINTEGER && buf.Bytes[buf.Cursor]&0x80 != 0 {
+		bits = ^uint64(0)
 	}
-
-	var num int64
-	switch maxSize {
-	case TYPENUMBER_8:
-		num = int64(np[0])
-	case TYPENUMBER_16:
-		num = int64(int16(binary.BigEndian.Uint16(np)))
-	case TYPENUMBER_32:
-		num = int64(int32(binary.BigEndian.Uint32(np)))
-	case TYPENUMBER_64:
-		num = int64(binary.BigEndian.Uint64(np))
-	default:
-		return num, fmt.Errorf("Invalid number type size %02x", maxSize)
+	for _, b := range buf.Bytes[buf.Cursor : buf.Cursor+length] {
+		bits = bits<<8 | uint64(b)
 	}
+	num := int64(bits)
 
 	BufUpdateBytesRead(buf, length)
 	// fmt.Printf("num: %d\n", num)

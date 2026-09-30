@@ -14,6 +14,9 @@ type GetProfileListResponse struct {
 
 func GetProfileListResponseParse(buf *Buffer) (GetProfileListResponse, error) {
 	msg := GetProfileListResponse{}
+	if err := validateBody(buf, MESSAGEGETPROFILELISTRESPONSE); err != nil {
+		return msg, err
+	}
 	var err error
 
 	if err := Expect(buf, TYPELIST, 9); err != nil {

@@ -2,7 +2,7 @@ package sml
 
 import "testing"
 
-func TestPortedMessageParsersAcceptOptionalFields(t *testing.T) {
+func TestPortedMessageParsersRejectMissingRequiredFields(t *testing.T) {
 	tests := []struct {
 		name string
 		data []byte
@@ -77,11 +77,14 @@ func TestPortedMessageParsersAcceptOptionalFields(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			buf := &Buffer{Bytes: tc.data}
-			if err := tc.fn(buf); err != nil {
-				t.Fatalf("parse failed: %v", err)
-			}
-			if buf.Cursor != len(tc.data) {
-				t.Fatalf("parser consumed %d bytes, expected %d", buf.Cursor, len(tc.data))
+			err := tc.fn(buf)
+			if tc.name == "AttentionResponse" {
+				// Required octet strings may be empty; 0x01 encodes those too.
+				if err != nil {
+					t.Fatal(err)
+				}
+			} else if err == nil {
+				t.Fatal("missing required structured fields accepted")
 			}
 		})
 	}
@@ -106,7 +109,8 @@ func TestMessageBodyParsePortedTypes(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			data := append([]byte{0x72}, tc.tag...)
-			data = append(data, tc.body...)
+			tag := uint32(tc.tag[1])<<24 | uint32(tc.tag[2])<<16 | uint32(tc.tag[3])<<8 | uint32(tc.tag[4])
+			data = append(data, minimalPayloadForTag(tag)...)
 			buf := &Buffer{Bytes: data}
 
 			msg, err := MessageBodyParse(buf)

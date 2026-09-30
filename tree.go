@@ -7,6 +7,7 @@ const (
 	PROCPARVALUETAGPERIODENTRY = 0x02
 	PROCPARVALUETAGTUPELENTRY  = 0x03
 	PROCPARVALUETAGTIME        = 0x04
+	PROCPARVALUETAGLISTENTRY   = 0x05
 )
 
 type TreePath []OctetString
@@ -23,6 +24,7 @@ type ProcParValue struct {
 	PeriodEntry *PeriodEntry
 	TupelEntry  *TupelEntry
 	Time        *Time
+	ListEntry   *ListEntry
 }
 
 type PeriodEntry struct {
@@ -63,6 +65,9 @@ func TreePathParse(buf *Buffer) (TreePath, error) {
 	if BufOptionalIsSkipped(buf) {
 		return nil, nil
 	}
+	if err := validateRule(buf, sequenceOf(octets, 1)); err != nil {
+		return nil, err
+	}
 
 	if err := ExpectType(buf, TYPELIST); err != nil {
 		return nil, err
@@ -87,6 +92,9 @@ func TreePathParse(buf *Buffer) (TreePath, error) {
 func TreeParse(buf *Buffer) (*Tree, error) {
 	if BufOptionalIsSkipped(buf) {
 		return nil, nil
+	}
+	if err := validateRule(buf, treeRule); err != nil {
+		return nil, err
 	}
 
 	tree := &Tree{}
@@ -130,6 +138,9 @@ func ProcParValueParse(buf *Buffer) (*ProcParValue, error) {
 	if BufOptionalIsSkipped(buf) {
 		return nil, nil
 	}
+	if err := validateRule(buf, procParRule); err != nil {
+		return nil, err
+	}
 
 	ppv := &ProcParValue{}
 
@@ -168,6 +179,12 @@ func ProcParValueParse(buf *Buffer) (*ProcParValue, error) {
 			return nil, err
 		}
 		ppv.Time = &time
+	case PROCPARVALUETAGLISTENTRY:
+		entry, err := ListEntryParse(buf)
+		if err != nil {
+			return nil, err
+		}
+		ppv.ListEntry = &entry
 	default:
 		return nil, fmt.Errorf("Invalid proc parameter value tag %02x", ppv.Tag)
 	}
@@ -178,6 +195,9 @@ func ProcParValueParse(buf *Buffer) (*ProcParValue, error) {
 func TupelEntryParse(buf *Buffer) (*TupelEntry, error) {
 	if BufOptionalIsSkipped(buf) {
 		return nil, nil
+	}
+	if err := validateRule(buf, tupelRule); err != nil {
+		return nil, err
 	}
 
 	tupel := &TupelEntry{}
@@ -271,6 +291,9 @@ func TupelEntryParse(buf *Buffer) (*TupelEntry, error) {
 func PeriodEntryParse(buf *Buffer) (*PeriodEntry, error) {
 	if BufOptionalIsSkipped(buf) {
 		return nil, nil
+	}
+	if err := validateRule(buf, periodEntryRule); err != nil {
+		return nil, err
 	}
 
 	period := &PeriodEntry{}

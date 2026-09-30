@@ -6,6 +6,9 @@ type CloseRequest struct {
 
 func CloseRequestParse(buf *Buffer) (CloseRequest, error) {
 	msg := CloseRequest{}
+	if err := validateBody(buf, MESSAGECLOSEREQUEST); err != nil {
+		return msg, err
+	}
 	var err error
 
 	if err := Expect(buf, TYPELIST, 1); err != nil {

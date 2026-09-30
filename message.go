@@ -3,7 +3,6 @@ package sml
 import (
 	//	"fmt"
 
-	"encoding/binary"
 	"errors"
 	"fmt"
 )
@@ -49,7 +48,7 @@ func MessageBodyParse(buf *Buffer) (MessageBody, error) {
 		return body, err
 	}
 
-	if body.Tag, err = pulseMessageTagParse(buf); err != nil {
+	if body.Tag, err = U32Parse(buf); err != nil {
 		return body, err
 	}
 
@@ -101,46 +100,41 @@ func MessageBodyParse(buf *Buffer) (MessageBody, error) {
 	return body, fmt.Errorf("Invalid message type: % x", body.Tag)
 }
 
-func pulseMessageTagParse(buf *Buffer) (uint32, error) {
-	if BufGetCurrentByte(buf) != 0x43 {
-		return U32Parse(buf)
-	}
-	correction := buf.Cursor
-	if length := BufGetNextLength(buf); length != 2 {
-		return 0, fmt.Errorf("Invalid Pulse message tag length: %d (expected 2)", length)
-	}
-	if buf.Cursor+2 > len(buf.Bytes) {
-		return 0, errors.New("Unexpected end of buffer while parsing Pulse message tag")
-	}
-	tag := binary.BigEndian.Uint16(buf.Bytes[buf.Cursor : buf.Cursor+2])
-	BufUpdateBytesRead(buf, 2)
-	buf.pulseCorrections = append(buf.pulseCorrections, pulseCorrection{offset: correction, original: 0x43, replacement: TYPEUNSIGNED | 3})
-	return uint32(tag), nil
-}
-
 func MessageParse(buf *Buffer, validate ...bool) (Message, error) {
 	Debug(buf, "MessageParse")
 
 	msg := Message{}
 	var err error
-	pulseCorrectionsStart := len(buf.pulseCorrections)
 
 	crcStart := buf.Cursor
 
 	if err := Expect(buf, TYPELIST, 6); err != nil {
 		return msg, err
 	}
+	// Required header fields may not use the OPTIONAL marker.
+	if buf.Cursor >= len(buf.Bytes) {
+		return msg, errors.New("Missing transactionId")
+	}
 
 	if msg.TransactionID, err = OctetStringParse(buf); err != nil {
 		return msg, err
 	}
-
-	if msg.GroupID, err = PulseU8Parse(buf); err != nil {
-		return msg, err
+	if BufGetCurrentByte(buf) == OPTIONALSKIPPED {
+		return msg, errors.New("Missing groupNo")
 	}
 
-	if msg.AbortOnError, err = PulseU8Parse(buf); err != nil {
+	if msg.GroupID, err = U8Parse(buf); err != nil {
 		return msg, err
+	}
+	if BufGetCurrentByte(buf) == OPTIONALSKIPPED {
+		return msg, errors.New("Missing abortOnError")
+	}
+
+	if msg.AbortOnError, err = U8Parse(buf); err != nil {
+		return msg, err
+	}
+	if msg.AbortOnError != 0 && msg.AbortOnError != 1 && msg.AbortOnError != 2 && msg.AbortOnError != 0xff {
+		return msg, errors.New("Invalid abortOnError")
 	}
 
 	if msg.MessageBody, err = MessageBodyParse(buf); err != nil {
@@ -148,26 +142,30 @@ func MessageParse(buf *Buffer, validate ...bool) (Message, error) {
 	}
 
 	crcEnd := buf.Cursor
+	if BufGetCurrentByte(buf) == OPTIONALSKIPPED {
+		return msg, errors.New("Missing message CRC")
+	}
 
 	if msg.Crc, err = U16Parse(buf); err != nil {
 		return msg, err
 	}
 
-	if len(validate) > 0 && validate[0] {
+	// The obsolete optional argument no longer disables CRC validation.
+	{
 		//		fmt.Println(buf.Cursor)
 		crc := Crc16Calculate(buf.Bytes[crcStart:crcEnd], crcEnd-crcStart)
 		//		fmt.Printf("%04x-%04x\n", crc, msg.Crc)
 
-		corrections := buf.pulseCorrections[pulseCorrectionsStart:]
-		if crc != msg.Crc && !pulseCRCMatches(buf.Bytes[crcStart:crcEnd], msg.Crc, crcStart, corrections) {
+		if crc != msg.Crc {
 			err := errors.New("Crc error")
 			return msg, err
 		}
 	}
 
-	if BufGetCurrentByte(buf) == MESSAGEEND {
-		BufUpdateBytesRead(buf, 1)
+	if buf.Cursor >= len(buf.Bytes) || BufGetCurrentByte(buf) != MESSAGEEND {
+		return msg, errors.New("Missing EndOfSmlMsg")
 	}
+	BufUpdateBytesRead(buf, 1)
 
 	return msg, nil
 }

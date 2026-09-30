@@ -2,7 +2,7 @@ package sml
 
 type ListEntry struct {
 	ObjName        OctetString
-	Status         int64
+	Status         uint64
 	ValTime        Time
 	Unit           uint8
 	Scaler         int8
@@ -14,6 +14,9 @@ func ListEntryParse(buf *Buffer) (ListEntry, error) {
 	Debug(buf, "ListEntryParse")
 
 	elem := ListEntry{}
+	if err := validateRule(buf, listEntryRule); err != nil {
+		return elem, err
+	}
 	var err error
 
 	if err := Expect(buf, TYPELIST, 7); err != nil {
@@ -32,7 +35,7 @@ func ListEntryParse(buf *Buffer) (ListEntry, error) {
 		return elem, err
 	}
 
-	if elem.Unit, err = PulseU8Parse(buf); err != nil {
+	if elem.Unit, err = U8Parse(buf); err != nil {
 		return elem, err
 	}
 
@@ -40,10 +43,7 @@ func ListEntryParse(buf *Buffer) (ListEntry, error) {
 		return elem, err
 	}
 
-	previousPulseValue := buf.pulseValue
-	buf.pulseValue = true
 	elem.Value, err = ValueParse(buf)
-	buf.pulseValue = previousPulseValue
 	if err != nil {
 		return elem, err
 	}
@@ -58,6 +58,9 @@ func ListEntryParse(buf *Buffer) (ListEntry, error) {
 func ListParse(buf *Buffer) ([]ListEntry, error) {
 	if BufOptionalIsSkipped(buf) {
 		return nil, nil
+	}
+	if err := validateRule(buf, sequenceOf(listEntryRule, 0)); err != nil {
+		return nil, err
 	}
 
 	Debug(buf, "ListParse")

@@ -33,8 +33,8 @@ func TestBufGetCurrentByteOutOfBoundsReturnsZero(t *testing.T) {
 
 func TestFileParseStopsOnNonListByte(t *testing.T) {
 	messages, err := FileParse([]byte{0x60, 0x00, 0x00})
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
+	if err == nil {
+		t.Fatal("unexpected trailing bytes accepted")
 	}
 
 	if len(messages) != 0 {

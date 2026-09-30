@@ -16,6 +16,9 @@ type GetProfilePackRequest struct {
 
 func GetProfilePackRequestParse(buf *Buffer) (GetProfilePackRequest, error) {
 	msg := GetProfilePackRequest{}
+	if err := validateBody(buf, MESSAGEGETPROFILEPACKREQUEST); err != nil {
+		return msg, err
+	}
 	var err error
 
 	if err := Expect(buf, TYPELIST, 9); err != nil {

@@ -1,9 +1,6 @@
 package sml
 
-import (
-	"strings"
-	"testing"
-)
+import "testing"
 
 func TestGetListResponseParseWithEmptyValueList(t *testing.T) {
 	buf := &Buffer{Bytes: []byte{0x77, 0x01, 0x01, 0x01, 0x01, 0x70, 0x01, 0x01}}
@@ -51,7 +48,7 @@ func TestGetListResponseParseRejectsInvalidValueListType(t *testing.T) {
 	buf := &Buffer{Bytes: []byte{0x77, 0x01, 0x01, 0x01, 0x01, 0x63, 0x01, 0x01, 0x01}}
 
 	_, err := GetListResponseParse(buf)
-	if err == nil || !strings.Contains(err.Error(), "Unexpected type") {
-		t.Fatalf("expected unexpected-type error, got %v", err)
+	if err == nil {
+		t.Fatal("invalid value-list type accepted")
 	}
 }

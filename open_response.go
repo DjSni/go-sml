@@ -11,6 +11,9 @@ type OpenResponse struct {
 
 func OpenResponseParse(buf *Buffer) (OpenResponse, error) {
 	msg := OpenResponse{}
+	if err := validateBody(buf, MESSAGEOPENRESPONSE); err != nil {
+		return msg, err
+	}
 	var err error
 
 	if err := Expect(buf, TYPELIST, 6); err != nil {

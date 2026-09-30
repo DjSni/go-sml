@@ -9,6 +9,9 @@ type AttentionResponse struct {
 
 func AttentionResponseParse(buf *Buffer) (AttentionResponse, error) {
 	msg := AttentionResponse{}
+	if err := validateBody(buf, MESSAGEATTENTIONRESPONSE); err != nil {
+		return msg, err
+	}
 	var err error
 
 	if err := Expect(buf, TYPELIST, 4); err != nil {
